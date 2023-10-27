@@ -129,11 +129,10 @@ while retries < 3
 			print("Success!")
 		end if
 		delete("file.cap")
-		break
+		exit()
 	else
 		print("\nRetrying! [Press Ctrl+c to exit]")
 	end if
 	retries=retries+1
 end while
-
 print("Failed too many times, please try joining manually")
