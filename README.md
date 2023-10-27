@@ -1,9 +1,9 @@
-<centre>
+<div align="center">
 
 # greyhack-scripts
 *My gray hack scripts*
 
-</centre>
+</div>
 
 <details open>
 <summary><h2>Network</h2></summary>
