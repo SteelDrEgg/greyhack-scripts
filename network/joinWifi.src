@@ -1,0 +1,139 @@
+cryptools = include_lib("/lib/crypto.so")
+
+if not cryptools then
+	exit("Error: Missing crypto library")
+end if
+
+getCode = function(targetList)
+	while true
+		code = user_input("Code > ")
+
+		if typeof(to_int(code)) == "number" then
+			code = to_int(code)
+
+			if code < targetList.len then
+				break
+			end if
+		end if
+
+		print("Invalid input")
+	end while
+	return code
+end function
+
+enableMonitorMode = function()
+	if nicMonitorModeEnabled == "False" then
+		cryptools.airmon("start", nic)
+	end if
+
+end function
+
+disableMonitorMode = function()
+	if nicMonitorModeEnabled == "True" then
+		cryptools.airmon("stop", nic)
+	end if
+
+end function
+
+// Select WiFi device and enable monitor mode
+print("Choose WiFi Devices")
+computer = get_shell.host_computer
+devices = computer.network_devices.split("\n")
+n = 0
+devicesStr = "Code Name"
+
+for dev in devices[ : -1]
+	devicesStr = devicesStr + "\n" + n + " " + dev.split(" ")[0]
+	n = n + 1
+end for
+
+print(format_columns(devicesStr))
+
+code = getCode(devices)
+nic = devices[code].split(" ")[0]
+nicMonitorModeEnabled = devices[code].split(" ")[2]
+enableMonitorMode
+
+networks = computer.wifi_networks(nic)
+
+info = "Code BSSID PWR ESSID"
+n = 0
+
+for network in networks
+	info = info + "\n" + n + " " + network
+	n = n + 1
+end for
+
+print(format_columns(info))
+
+code = getCode(networks)
+BSSID = networks[code].split(" ")[0]
+power = to_int(networks[code].split(" ")[1][ : -1])
+ESSID = networks[code].split(" ")[2]
+
+// Start collecting ACKs and crack password then finally try joining WiFi
+retries = 1
+while retries < 3
+	err = delete("file.cap")
+
+	if typeof(err) == "string" then
+		exit("Please remove file.cap, encountered error: " + err)
+	end if
+
+	clear_screen()
+	print("Collecting packages\n")
+	estimatedACKs = 0
+
+	if power > 50 then
+		estimatedACKs = 7000
+	else if power > 40 then
+		estimatedACKs = 7700
+	else if power > 30 then
+		estimatedACKs = 10500
+	else if power > 10 then
+		estimatedACKs = 33000
+	else
+		estimatedACKs = 300100
+	end if
+	estimatedACKs=estimatedACKs*retries
+
+	print("Estimated time: " + (0.008 * estimatedACKs) + " seconds\n\n")
+	err = cryptools.aireplay(BSSID, ESSID, estimatedACKs)
+
+	if typeof(err) == "string" then
+		exit("\nEncountered error: " + err)
+	end if
+
+	disableMonitorMode
+	file = computer.File("file.cap")
+	
+	if file == null then
+		exit("file.cap Not Found!")
+	end if
+	
+	if not file.is_binary then
+		exit("Can't process file. Not valid filecap.")
+	end if
+	
+	if not file.has_permission("r") then
+		exit("Permission denied when accessing file.cap")
+	end if
+	key = cryptools.aircrack(file.path)
+
+	if key then
+		print("\nKEY FOUND! [" + key + "]\nJoining network")
+		status = computer.connect_wifi(nic, BSSID, ESSID, key)
+		if typeof(status) == "string" then
+			print("Failed to join! Please try joining manually\nExiting")
+		else
+			print("Success!")
+		end if
+		delete("file.cap")
+		break
+	else
+		print("\nRetrying! [Press Ctrl+c to exit]")
+	end if
+	retries=retries+1
+end while
+
+print("Failed too many times, please try joining manually")
