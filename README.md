@@ -1,14 +1,14 @@
-<center>
+<centre>
 
 # greyhack-scripts
 *My gray hack scripts*
 
-</center>
+</centre>
 
 <details open>
-<summary><h1>Network</h1></summary>
+<summary><h2>Network</h2></summary>
 
-<h4><a href="network/joinWifi.src">joinWifi</a></h4>
+<h3><a href="network/joinWifi.src">joinWifi</a></h3>
 A script to crack WiFi password and join it
 
 </details>
